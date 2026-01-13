@@ -115,6 +115,8 @@ if pd.notnull(min_date) and pd.notnull(max_date):
 dpsm_disp = sorted(df_kpi['DPSM'].unique())
 dpsm_sel = st.sidebar.multiselect("5.DPSM:", options=dpsm_disp)
 
+if dpsm_sel:
+    df_kpi = df_kpi[df_kpi['DPSM'].isin(dpsm_sel)
 
 # --- 4. TRATAMENTO DE OUTLIERS (Switch) ---
 st.sidebar.markdown("---")

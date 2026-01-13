@@ -111,6 +111,11 @@ if pd.notnull(min_date) and pd.notnull(max_date):
             (df_kpi['periodo'] <= pd.to_datetime(dates[1]))
         ]
 
+# 6. Filtro de DPSM
+dpsm_disp = sorted(df_kpi['DPSM'].unique())
+dpsm_sel = st.sidebar.multiselect("5.DPSM:", options=dpsm_disp)
+
+
 # --- 4. TRATAMENTO DE OUTLIERS (Switch) ---
 st.sidebar.markdown("---")
 usar_filtro_outliers = st.sidebar.checkbox("Remover Outliers", value=True)

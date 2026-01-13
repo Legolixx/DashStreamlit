@@ -1,156 +1,186 @@
-
-# app.py
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import numpy as np
 
-st.set_page_config(page_title="Dashboard Hyundai", layout="wide")
-st.title("📊 DashBoard Hyundai")
+# Configuração da Página
+st.set_page_config(page_title="Dashboard Hyundai", layout="wide", page_icon="🚗")
 
-# === Carregar dados ===
+# --- 1. FUNÇÕES DE CARREGAMENTO E LIMPEZA ---
+
 @st.cache_data
-def load_data(path: str):
-    df = pd.read_csv(path, parse_dates=['periodo_dt'])
+def carregar_dados():
+    # Carrega o CSV. Assumindo que o separador é vírgula, mas ajustável
+    df = pd.read_csv("ger_servicos.csv")
     return df
 
-df = load_data('ger_servicos_clean.csv')
+def limpar_dados(df):
+    # Cópia para não alterar o cache original
+    df_clean = df.copy()
 
-# === Classificação dos indicadores ===
-# snapshot = "estoque/capacidade no mês" -> usar média / último mês / máximo
-# flow     = "fluxo do mês" -> usar soma no período
-INDICATOR_TYPE = {
-    "R$ Estoque Obsoleto": "snapshot",
-    "Estoque Total R$": "snapshot",
-    "Dias Espera": "snapshot",
-    "Qtd. Atual": "snapshot",
-    "Box (S/Elevador)": "snapshot",
-    "Box (C/Elevador)": "snapshot",
-    "Box Quick Service": "snapshot",
-    "Qtd. Pneus": "snapshot",
-    # Fluxos:
-    "Faturamento": "flow",
-    "Faturamento Car Care": "flow",
-    "Faturamento de Peças": "flow",
-    "Faturamento de MDO": "flow",
-    "Qtd. Revisões": "flow",
-    "Qtd. Passagens": "flow",
-    "Qtd. Passagens CPUS": "flow",
-    "Qtd. Passagens Internas": "flow",
-    "Qtd. de Sanitização / Hig. Ar-Cond.": "flow",
-    "Qtd de Alinh. e/ou": "flow",
-    "Qtd. Car Care": "flow",
-}
+    # 1. Tratar a coluna 'realizado' (Converter de "1.200,50" para float 1200.50)
+    # Remove aspas, remove pontos de milhar, troca vírgula por ponto
+    df_clean['realizado'] = df_clean['realizado'].astype(str).str.replace('"', '', regex=False)
+    df_clean['realizado'] = df_clean['realizado'].str.replace('.', '', regex=False)
+    df_clean['realizado'] = df_clean['realizado'].str.replace(',', '.', regex=False)
+    df_clean['realizado'] = pd.to_numeric(df_clean['realizado'], errors='coerce')
 
-# títulos disponíveis efetivamente no arquivo
-titulos_disponiveis = sorted(df['titulo'].dropna().unique().tolist())
+    # 2. Tratar a coluna 'periodo' (Converter para Datetime)
+    df_clean['periodo'] = pd.to_datetime(df_clean['periodo'], format='%d/%m/%Y', errors='coerce')
 
-# === Sidebar ===
+    return df_clean
+
+def tratar_outliers(df, coluna='realizado'):
+    """
+    Remove outliers usando o método do Intervalo Interquartil (IQR).
+    Tudo que estiver muito acima do 3º quartil ou muito abaixo do 1º é removido.
+    """
+    if df.empty:
+        return df
+        
+    Q1 = df[coluna].quantile(0.25)
+    Q3 = df[coluna].quantile(0.75)
+    IQR = Q3 - Q1
+    
+    # Definindo limites (1.5 é o padrão estatístico para outliers moderados)
+    limite_inferior = Q1 - 1.5 * IQR
+    limite_superior = Q3 + 1.5 * IQR
+    
+    # Retorna apenas os dados dentro dos limites
+    df_sem_outliers = df[(df[coluna] >= limite_inferior) & (df[coluna] <= limite_superior)]
+    
+    return df_sem_outliers, limite_superior
+
+# --- 2. INTERFACE DO DASHBOARD ---
+
+st.title("📊 Dashboard Hyundai - Análise de Serviços")
+st.markdown("---")
+
+# Carregar e Limpar
+try:
+    df_raw = carregar_dados()
+    df = limpar_dados(df_raw)
+except FileNotFoundError:
+    st.error("Arquivo 'ger_servicos.csv' não encontrado. Por favor, faça o upload.")
+    st.stop()
+except Exception as e:
+    st.error(f"Erro ao processar os dados: {e}")
+    st.stop()
+
+# --- SIDEBAR (Filtros) ---
 st.sidebar.header("Filtros")
 
-# Indicador
-ind_default = "R$ Estoque Obsoleto" if "R$ Estoque Obsoleto" in titulos_disponiveis else titulos_disponiveis[0]
-indicador = st.sidebar.selectbox("Indicador", options=titulos_disponiveis, index=titulos_disponiveis.index(ind_default))
+# Filtro de Título (Importante: não misturar R$ com Qtd na mesma análise)
+titulos_unicos = df['titulo'].unique()
+titulo_selecionado = st.sidebar.selectbox("Selecione o Indicador (Título):", titulos_unicos)
 
-# Período
-min_date = pd.to_datetime(df['periodo_dt']).min()
-max_date = pd.to_datetime(df['periodo_dt']).max()
-start_date, end_date = st.sidebar.date_input(
-    "Período",
-    value=(min_date.date(), max_date.date()),
-    min_value=min_date.date(),
-    max_value=max_date.date()
+# Filtrar o DataFrame pelo título primeiro
+df_filtrado = df[df['titulo'] == titulo_selecionado]
+
+# Filtro de Data
+min_date = df_filtrado['periodo'].min()
+max_date = df_filtrado['periodo'].max()
+
+if pd.notnull(min_date) and pd.notnull(max_date):
+    data_inicio, data_fim = st.sidebar.date_input(
+        "Selecione o Período",
+        value=(min_date, max_date),
+        min_value=min_date,
+        max_value=max_date
+    )
+    # Aplicar filtro de data
+    df_filtrado = df_filtrado[
+        (df_filtrado['periodo'] >= pd.to_datetime(data_inicio)) & 
+        (df_filtrado['periodo'] <= pd.to_datetime(data_fim))
+    ]
+
+# Filtro de Chave (Lojas/Setores)
+chaves = st.sidebar.multiselect(
+    "Filtrar por Chave/Unidade:",
+    options=df_filtrado['chave'].unique(),
+    default=df_filtrado['chave'].unique()
 )
+df_filtrado = df_filtrado[df_filtrado['chave'].isin(chaves)]
 
-# Dealers
-dealers = sorted(df['chave'].dropna().unique().tolist())
-dealers_sel = st.sidebar.multiselect("Dealers (chave)", dealers, default=dealers)
+# --- CONTROLE DE OUTLIERS ---
+st.sidebar.markdown("---")
+st.sidebar.subheader("Tratamento de Dados")
+aplicar_outliers = st.sidebar.checkbox("Remover Outliers (Valores Extremos)", value=True)
 
-# Outliers
-hide_outliers = st.sidebar.checkbox("Excluir outliers", value=True)
+df_final = df_filtrado.copy()
+outliers_removidos = 0
 
-# Agregação temporal condicional
-tipo = INDICATOR_TYPE.get(indicador, "snapshot")
-if tipo == "snapshot":
-    agg_choice = st.sidebar.radio("Agregação temporal (snapshot)", ["Média Mensal", "Último Mês Visível", "Máximo Mensal"], index=0)
-else:
-    agg_choice = st.sidebar.radio("Agregação temporal (fluxo)", ["Soma", "Média Mensal"], index=0)
+if aplicar_outliers:
+    registros_antes = len(df_final)
+    df_final, teto = tratar_outliers(df_final)
+    registros_depois = len(df_final)
+    outliers_removidos = registros_antes - registros_depois
+    
+    st.sidebar.info(f"Corte aplicado acima de: {teto:,.2f}")
+    if outliers_removidos > 0:
+        st.sidebar.warning(f"{outliers_removidos} registros outliers removidos.")
 
-# === Filtrar base ===
-mask = (
-    (df['titulo'] == indicador) &
-    (df['periodo_dt'] >= pd.to_datetime(start_date)) &
-    (df['periodo_dt'] <= pd.to_datetime(end_date)) &
-    (df['chave'].isin(dealers_sel))
-)
-base = df.loc[mask].copy()
-if hide_outliers and 'outlier_realizado' in base.columns:
-    base = base[~base['outlier_realizado']]
+# --- KPIS (Indicadores Chave) ---
 
-# Mês referência (primeiro dia do mês)
-base['mes_ref'] = base['periodo_dt'].values.astype('datetime64[M]')
-
-# === Série mensal (soma por mês entre dealers) ===
-monthly = base.groupby('mes_ref', as_index=False)['realizado_num'].sum().sort_values('mes_ref')
-
-# KPI
-kpi_label = indicador
-if tipo == 'snapshot':
-    if agg_choice == 'Média Mensal':
-        kpi_value = monthly['realizado_num'].mean()
-        kpi_suffix = ' (média)'
-    elif agg_choice == 'Último Mês Visível':
-        kpi_value = monthly.set_index('mes_ref')['realizado_num'].iloc[-1] if len(monthly)>0 else np.nan
-        kpi_suffix = ' (último mês)'
-    else:
-        kpi_value = monthly['realizado_num'].max()
-        kpi_suffix = ' (máximo)'
-else:
-    if agg_choice == 'Soma':
-        kpi_value = monthly['realizado_num'].sum()
-        kpi_suffix = ' (soma período)'
-    else:
-        kpi_value = monthly['realizado_num'].mean()
-        kpi_suffix = ' (média mensal)'
-
-# Variação mês a mês (com base na série mensal)
-mm_change = None
-if len(monthly) >= 2:
-    cur = monthly['realizado_num'].iloc[-1]
-    prev = monthly['realizado_num'].iloc[-2]
-    mm_change = (cur - prev) / prev if prev not in [0, np.nan] and prev != 0 else np.nan
-
-# === KPIs ===
 col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric(label=f"{kpi_label}{kpi_suffix}", value=f"{kpi_value:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.'))
-with col2:
-    if mm_change is not None and np.isfinite(mm_change):
-        st.metric(label="Variação M/M", value=f"{(mm_change*100):.1f}%")
-    else:
-        st.metric(label="Variação M/M", value="—")
-with col3:
-    st.metric(label="Meses no período", value=len(monthly))
 
-st.divider()
+total_realizado = df_final['realizado'].sum()
+media_realizado = df_final['realizado'].mean()
+total_registros = df_final.shape[0]
 
-# === Tendência ===
-st.subheader("Tendência mensal")
-st.line_chart(monthly, x='mes_ref', y='realizado_num', height=300)
+# Formatação condicional baseada no tipo de indicador (Dinheiro ou Qtd)
+prefixo = "R$ " if "R$" in titulo_selecionado else ""
 
-# === Ranking por dealer ===
-st.subheader("Ranking por Dealer")
-if tipo == 'snapshot':
-    dealer_month = base.groupby(['chave','mes_ref'], as_index=False)['realizado_num'].sum()
-    dealer_rank = dealer_month.groupby('chave', as_index=False)['realizado_num'].mean().rename(columns={'realizado_num':'valor'})
-else:
-    dealer_rank = base.groupby('chave', as_index=False)['realizado_num'].sum().rename(columns={'realizado_num':'valor'})
+col1.metric("Total Realizado", f"{prefixo}{total_realizado:,.2f}")
+col2.metric("Média por Registro", f"{prefixo}{media_realizado:,.2f}")
+col3.metric("Registros Analisados", total_registros)
 
-dealer_rank = dealer_rank.sort_values('valor', ascending=False)
-st.bar_chart(dealer_rank.set_index('chave').head(15))
+st.markdown("---")
 
-# === Detalhamento e download ===
-st.subheader("Detalhamento (linhas)")
-st.dataframe(base[['periodo_dt','chave','titulo','sub_titulo','realizado_num','outlier_realizado']].sort_values(['periodo_dt','chave']))
+# --- GRÁFICOS ---
 
-csv = base.to_csv(index=False).encode('utf-8')
-st.download_button("Baixar dados filtrados (CSV)", data=csv, file_name="dados_filtrados.csv", mime="text/csv")
+row1_col1, row1_col2 = st.columns([2, 1])
+
+with row1_col1:
+    st.subheader("Evolução Temporal")
+    # Agrupar por mês/data para limpar o gráfico
+    df_timeline = df_final.groupby('periodo')['realizado'].sum().reset_index()
+    
+    fig_line = px.line(
+        df_timeline, 
+        x='periodo', 
+        y='realizado', 
+        markers=True,
+        title=f"Evolução de {titulo_selecionado} ao longo do tempo"
+    )
+    fig_line.update_layout(xaxis_title="Período", yaxis_title="Valor Realizado")
+    st.plotly_chart(fig_line, use_container_width=True)
+
+with row1_col2:
+    st.subheader("Distribuição (Boxplot)")
+    # O Boxplot é ótimo para ver como ficaram os dados após limpar outliers
+    fig_box = px.box(
+        df_final, 
+        y="realizado", 
+        title="Distribuição dos Valores",
+        points="all" # mostra os pontos individuais
+    )
+    st.plotly_chart(fig_box, use_container_width=True)
+
+st.subheader("Performance por Chave (Unidade/Loja)")
+# Top performances
+df_barras = df_final.groupby('chave')['realizado'].sum().reset_index().sort_values(by='realizado', ascending=False)
+
+fig_bar = px.bar(
+    df_barras, 
+    x='chave', 
+    y='realizado', 
+    color='realizado',
+    color_continuous_scale='Blues',
+    title="Comparativo por Chave"
+)
+st.plotly_chart(fig_bar, use_container_width=True)
+
+# --- VISUALIZAÇÃO DOS DADOS BRUTOS ---
+with st.expander("Ver Tabela de Dados (Processados)"):
+    st.dataframe(df_final.sort_values(by='periodo', ascending=False))

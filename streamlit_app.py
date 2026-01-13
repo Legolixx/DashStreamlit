@@ -161,8 +161,8 @@ with row1_1:
 
 with row1_2:
     st.subheader("🌎 Por Região")
-    df_regiao = df_final.groupby('REGIÃO')['realizado'].sum().reset_index()
-    fig_pie = px.pie(df_regiao, values='realizado', names='REGIÃO', hole=0.4)
+    df_regiao = df_final.groupby('REGIAO')['realizado'].sum().reset_index()
+    fig_pie = px.pie(df_regiao, values='realizado', names='REGIAO', hole=0.4)
     st.plotly_chart(fig_pie, use_container_width=True)
 
 # LINHA 2: Análise de Dealer e Grupos
@@ -202,6 +202,6 @@ with tab2:
 # --- 6. TABELA DE DADOS DETALHADA ---
 with st.expander("📂 Ver Dados Brutos Filtrados"):
     st.dataframe(
-        df_final[['periodo', 'REGIÃO', 'STATE', 'GRUPO', 'DESCR_DEALER', 'titulo', 'realizado']]
+        df_final[['periodo', 'REGIAO', 'STATE', 'GRUPO', 'DESCR_DEALER', 'titulo', 'realizado']]
         .sort_values(by='periodo', ascending=False)
     )

@@ -76,10 +76,10 @@ titulo_sel = st.sidebar.selectbox("1. Selecione o KPI (Indicador):", titulos)
 df_kpi = df[df['titulo'] == titulo_sel]
 
 # 2. Região (Multiselect)
- regioes_disp = sorted(df_kpi['REGIÃO'].unique())
+ regioes_disp = sorted(df_kpi['REGIAO'].unique())
 regiao_sel = st.sidebar.multiselect("2. Região:", regioes_disp, default=regioes_disp)
 if regiao_sel:
-    df_kpi = df_kpi[df_kpi['REGIÃO'].isin(regiao_sel)]
+    df_kpi = df_kpi[df_kpi['REGIAO'].isin(regiao_sel)]
 
 # 3. Estado (Filtrado pelas regiões selecionadas acima)
 estados_disp = sorted(df_kpi['STATE'].unique())

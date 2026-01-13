@@ -66,7 +66,6 @@ except FileNotFoundError:
     st.stop()
 
 # --- 3. SIDEBAR: FILTROS HIERÁRQUICOS ---
-# O segredo aqui é fazer um filtro afetar as opções do próximo (Cascata)
 
 st.sidebar.header("Filtros de Análise")
 
@@ -75,31 +74,42 @@ titulos = df['titulo'].unique()
 titulo_sel = st.sidebar.selectbox("1. Selecione o KPI (Indicador):", titulos)
 df_kpi = df[df['titulo'] == titulo_sel]
 
-# 2. Região (Multiselect)
- regioes_disp = sorted(df_kpi['REGIAO'].unique())
+# 2. Região (Multiselect) - CORRIGIDO O ESPAÇO AQUI
+# Se você alterou o nome no CSV para REGIAO, mude abaixo. Se o CSV estiver original, use REGIÃO
+coluna_regiao = 'REGIAO' if 'REGIAO' in df_kpi.columns else 'REGIÃO'
+
+regioes_disp = sorted(df_kpi[coluna_regiao].unique())
 regiao_sel = st.sidebar.multiselect("2. Região:", regioes_disp, default=regioes_disp)
+
 if regiao_sel:
-    df_kpi = df_kpi[df_kpi['REGIAO'].isin(regiao_sel)]
+    df_kpi = df_kpi[df_kpi[coluna_regiao].isin(regiao_sel)]
 
 # 3. Estado (Filtrado pelas regiões selecionadas acima)
 estados_disp = sorted(df_kpi['STATE'].unique())
 estado_sel = st.sidebar.multiselect("3. Estado (UF):", estados_disp, default=estados_disp)
+
 if estado_sel:
     df_kpi = df_kpi[df_kpi['STATE'].isin(estado_sel)]
 
 # 4. Grupo (Filtrado pelos estados selecionados)
 grupos_disp = sorted(df_kpi['GRUPO'].unique())
 grupo_sel = st.sidebar.multiselect("4. Grupo de Concessionárias:", options=grupos_disp)
+
 if grupo_sel:
     df_kpi = df_kpi[df_kpi['GRUPO'].isin(grupo_sel)]
 
 # 5. Filtro de Data
 min_date = df_kpi['periodo'].min()
 max_date = df_kpi['periodo'].max()
+
 if pd.notnull(min_date) and pd.notnull(max_date):
     dates = st.sidebar.date_input("Período:", [min_date, max_date])
+    # Verifica se o usuário selecionou data de inicio e fim (lista com 2 itens)
     if len(dates) == 2:
-        df_kpi = df_kpi[(df_kpi['periodo'] >= pd.to_datetime(dates[0])) & (df_kpi['periodo'] <= pd.to_datetime(dates[1]))]
+        df_kpi = df_kpi[
+            (df_kpi['periodo'] >= pd.to_datetime(dates[0])) & 
+            (df_kpi['periodo'] <= pd.to_datetime(dates[1]))
+        ]
 
 # --- 4. TRATAMENTO DE OUTLIERS (Switch) ---
 st.sidebar.markdown("---")

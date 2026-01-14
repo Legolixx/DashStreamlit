@@ -44,7 +44,7 @@ st.sidebar.title("Filtros")
 
 with st.expander("VER DADOS BRUTOS FILTRADOS"):
     st.dataframe(
-        df[['periodo', 'REGIÃO', 'STATE', 'GRUPO', 'DESCR_DEALER', 'titulo', 'realizado']].sort_values(by='periodo', ascending=False)
+        df[['periodo', 'REGIAO', 'STATE', 'GRUPO', 'DESCR_DEALER', 'titulo', 'realizado']].sort_values(by='periodo', ascending=False)
     )
 
 

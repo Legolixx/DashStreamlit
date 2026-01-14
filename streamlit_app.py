@@ -2,7 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 1. CONFIGURAÇÃO E ESTILO
+# =========================================================
+# 1. CONFIGURAÇÃO DA PÁGINA
+# =========================================================
 st.set_page_config(
     page_title="HMB - Executive Report",
     layout="wide",
@@ -12,11 +14,14 @@ st.set_page_config(
 st.markdown("""
 <style>
 .main { background-color: #f8f9fa; }
+
 [data-testid="stMetricValue"] {
     font-size: 32px !important;
     color: #002C5F !important;
 }
+
 .stTabs [data-baseweb="tab-list"] { gap: 24px; }
+
 .stTabs [data-baseweb="tab"] {
     height: 50px;
     white-space: pre-wrap;
@@ -26,12 +31,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. CARREGAMENTO E LIMPEZA
+# =========================================================
+# 2. CARGA E TRATAMENTO DOS DADOS
+# =========================================================
 @st.cache_data
 def carregar_dados():
     df = pd.read_csv("ger_servicos01.csv", sep=";", encoding="latin1")
 
-     # Normaliza metrica_id (ESSENCIAL)
+    # --- NORMALIZA metrica_id (CRÍTICO)
     df['metrica_id'] = (
         df['metrica_id']
         .astype(str)
@@ -39,10 +46,8 @@ def carregar_dados():
         .str.strip()
     )
     df['metrica_id'] = pd.to_numeric(df['metrica_id'], errors='coerce')
-    
-    
 
-    # Tratamento numérico
+    # --- TRATAMENTO DO REALIZADO
     df['realizado'] = (
         df['realizado']
         .astype(str)
@@ -51,17 +56,20 @@ def carregar_dados():
     )
     df['realizado'] = pd.to_numeric(df['realizado'], errors='coerce').fillna(0)
 
-    # Tratamento de data
+    # --- DATA
     df['periodo'] = pd.to_datetime(df['periodo'], dayfirst=True)
 
-    # Limpeza de strings
-    df['titulo'] = df['titulo'].str.upper().str.strip()
+    # --- LIMPEZA DE TEXTO
+    df['titulo'] = df['titulo'].astype(str).str.upper().str.strip()
 
     return df
 
+
 df = carregar_dados()
 
-# --- SIDEBAR ---
+# =========================================================
+# 3. SIDEBAR – FILTROS
+# =========================================================
 st.sidebar.image(
     "https://logosmarcas.net/wp-content/uploads/2021/04/Hyundai-Logo.png",
     width=150
@@ -69,37 +77,90 @@ st.sidebar.image(
 st.sidebar.title("Filtros")
 
 meses = sorted(df['periodo'].dt.strftime('%m/%Y').unique())
+
 mes_sel = st.sidebar.select_slider(
     "Período de análise",
     options=meses
 )
 
-# --- FILTRO DE DADOS ---
+# =========================================================
+# 4. FILTRO PRINCIPAL
+# =========================================================
 df_view = df[df['periodo'].dt.strftime('%m/%Y') == mes_sel]
 
-# --- TÍTULO ---
-st.title(f"Sumário Executivo - {mes_sel}")
-
-
-# --- FUNÇÃO DE APOIO ---
-def get_val(titulo_nome):
+# =========================================================
+# 5. FUNÇÃO DE NEGÓCIO (KPI)
+# =========================================================
+def get_val(metrica_id: int) -> float:
     return df_view.loc[
-        df_view['metrica_id'] == titulo_nome,
+        df_view['metrica_id'] == metrica_id,
         'realizado'
     ].sum()
 
-# --- KPIs ---
-passagens_cpus = get_val(143)
-passagens_internas = get_val(144)
-passagens_funilaria = get_val(154)
-passagens_totais = passagens_cpus + passagens_internas + passagens_funilaria
+# =========================================================
+# 6. MAPA DE MÉTRICAS (PADRÃO BI)
+# =========================================================
+METRICAS = {
+    "PASSAGENS_CPUS": 143,
+    "PASSAGENS_INTERNAS": 144,
+    "PASSAGENS_FUNILARIA": 154
+}
 
-# --- KPIs DE VOLUME ---
+# =========================================================
+# 7. CÁLCULO DOS KPIs
+# =========================================================
+passagens_cpus = get_val(METRICAS["PASSAGENS_CPUS"])
+passagens_internas = get_val(METRICAS["PASSAGENS_INTERNAS"])
+passagens_funilaria = get_val(METRICAS["PASSAGENS_FUNILARIA"])
+
+passagens_totais = (
+    passagens_cpus +
+    passagens_internas +
+    passagens_funilaria
+)
+
+# =========================================================
+# 8. DASHBOARD – KPIs
+# =========================================================
+st.title(f"📌 Sumário Executivo – {mes_sel}")
 st.subheader("📊 Volume de Passagens")
 
-m1, m2, m3, m4 = st.columns(4)
+c1, c2, c3, c4 = st.columns(4)
 
-m1.metric("Passagens Totais", f"{passagens_totais:,.0f}")
-m2.metric("Passagens CPUS", f"{passagens_cpus:,.0f}")
-m3.metric("Passagens Internas", f"{passagens_internas:,.0f}")
-m4.metric("Funilaria e Pintura", f"{passagens_funilaria:,.0f}")
+c1.metric("Passagens Totais", f"{passagens_totais:,.0f}")
+c2.metric("Passagens CPUS", f"{passagens_cpus:,.0f}")
+c3.metric("Passagens Internas", f"{passagens_internas:,.0f}")
+c4.metric("Funilaria e Pintura", f"{passagens_funilaria:,.0f}")
+
+# =========================================================
+# 9. ALERTA DE DADOS AUSENTES (INTELIGENTE)
+# =========================================================
+metricas_zeradas = [
+    nome for nome, mid in METRICAS.items()
+    if get_val(mid) == 0
+]
+
+if metricas_zeradas:
+    st.warning(
+        "⚠️ Atenção: métricas sem dados no período selecionado:\n\n"
+        + ", ".join(metricas_zeradas)
+    )
+
+# =========================================================
+# 10. DADOS DETALHADOS
+# =========================================================
+with st.expander("🔍 Ver dados brutos do período"):
+    st.dataframe(
+        df_view[
+            [
+                'periodo',
+                'REGIAO',
+                'STATE',
+                'GRUPO',
+                'DESCR_DEALER',
+                'metrica_id',
+                'titulo',
+                'realizado'
+            ]
+        ].sort_values(by='realizado', ascending=False)
+    )

@@ -46,7 +46,8 @@ st.title(f"Sumário Executivo - {mes_sel}")
 # --- PASSAGENS (O fluxo da oficina) ---
 st.subheader("Fluxo de passagens")
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Passagens Totais", f"{p_totais:,.0f}")
+
+p_cpus = calc_kpi(['CPUS'])
 
 
 

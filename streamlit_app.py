@@ -31,3 +31,7 @@ def carregar_dados():
     return df
 
 df = carregar_dados()
+
+# ---SIDEBAR ---
+st.sidebar.image("")
+st.sidebar.title("Filtros")

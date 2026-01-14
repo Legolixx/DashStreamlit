@@ -44,7 +44,6 @@ mes_sel = st.sidebar.select_slider("Período de análise", options=sorted(meses)
 st.title(f"Sumário Executivo - {mes_sel}")
 
 # Aplicação dos filtros
-df_view = df[df['REGIAO'].isin(regioes)]
 df_view = df_view[df_view['periodo'].dt.strftime('%m/%Y') == mes_sel]
 
 # --- LÓGICA DE NEGÓCIO (Cálculo dos KPIs do Presidente) ---

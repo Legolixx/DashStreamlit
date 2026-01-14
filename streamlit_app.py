@@ -151,24 +151,30 @@ with c1:
 # =========================================================
 with c2:
     if st.session_state.get("ver_evolucao", False):
-        evolucao = (
-            df[df['metrica_id'].isin(METRICAS_PASSAGENS)]
-            .groupby('periodo_mes')['realizado']
-            .sum()
-            .reset_index()
-            .sort_values('periodo_mes')
-            .tail(6)
-        )
+       evolucao = (
+    df[df['metrica_id'].isin(METRICAS_PASSAGENS)]
+    .groupby('periodo_mes')['realizado']
+    .sum()
+    .reset_index()
+    .sort_values('periodo_mes')
+    .tail(6)
+)
 
-        fig_evolucao = px.line(
-            evolucao,
-            x='periodo_mes',
-            y='realizado',
-            markers=True,
-            title="Evolução – Passagens Totais (Últimos 6 meses)"
-        )
+# 🔴 CONVERSÃO CRÍTICA PARA PLOTLY
+evolucao['periodo_label'] = evolucao['periodo_mes'].dt.to_timestamp()
 
-        st.plotly_chart(fig_evolucao, use_container_width=True)
+fig_evolucao = px.line(
+    evolucao,
+    x='periodo_label',
+    y='realizado',
+    markers=True,
+    title="Evolução – Passagens Totais (Últimos 6 meses)"
+)
+
+fig_evolucao.update_xaxes(
+    tickformat="%m/%Y",
+    title=""
+)
 
 # =========================================================
 # 10. RANKING DE DEALERS

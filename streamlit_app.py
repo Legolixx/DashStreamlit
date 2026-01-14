@@ -36,11 +36,7 @@ st.markdown("""
 # =========================================================
 @st.cache_data
 def carregar_dados():
-    df = pd.read_csv("ger_servicos01.csv", sep=";", encoding="latin1")
-
-    st.write(df.columns.tolist())
-    st.stop()
-
+    df = pd.read_csv("ger_servicos01.csv", sep=";", encoding="utf-8-sig")
 
     # --- NORMALIZA metrica_id (CRÍTICO)
     df['metrica_id'] = (

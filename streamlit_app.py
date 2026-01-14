@@ -169,8 +169,30 @@ if metricas_zeradas:
     )
 
 # =========================================================
-# 10. DADOS DETALHADOS
+# 10. TESTE DETAIL
 # =========================================================
 if st.button("📈 Ver evolução – Passagens Totais"):
     st.session_state["ver_evolucao_passagens"] = True
+
+if st.session_state.get("ver_evolucao_passagens", False):
+    ultimos_6 = (
+    df[df['metrica_id'].isin([143, 144, 154])]
+    .groupby('periodo_mes')['realizado']
+    .sum()
+    .reset_index()
+    .sort_values('periodo_mes')
+    .tail(6)
+)
+
+fig = px.line(
+    ultimos_6,
+    x='periodo_mes',
+    y='realizado',
+    markers=True,
+    title="Evolução – Passagens Totais (Últimos 6 meses)"
+)
+
+st.plotly_chart(fig, use_container_width=True)
+    
+
 

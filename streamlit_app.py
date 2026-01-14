@@ -77,7 +77,11 @@ st.sidebar.image(
 st.sidebar.title("Filtros")
 
 meses = sorted(df['periodo'].dt.strftime('%m/%Y').unique())
-mes_default = meses[-1]
+mes_default = (
+    df['periodo']
+    .max()
+    .strftime('%m/%Y')
+)
 
 mes_sel = st.sidebar.select_slider(
     "Período de análise",

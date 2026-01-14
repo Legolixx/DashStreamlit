@@ -35,3 +35,23 @@ df = carregar_dados()
 # ---SIDEBAR ---
 st.sidebar.image("https://logosmarcas.net/wp-content/uploads/2021/04/Hyundai-Logo.png", width=150)
 st.sidebar.title("Filtros")
+
+
+
+
+
+# --- TABELA DE DADOS DETALHADA ---
+
+with st.expander("VER DADOS BRUTOS FILTRADOS"):
+    st.dataframe(
+        df_final[['periodo', 'REGIAO', 'STATE']].sort_values(by='periodo', ascending=False)
+    )
+
+
+
+
+
+
+
+
+

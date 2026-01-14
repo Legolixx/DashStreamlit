@@ -79,7 +79,7 @@ def get_val(titulo_nome):
 
 # --- KPIs ---
 faturamento_total = get_val("R$ FATURAMENTO TOTAL")
-passagens_totais = get_val("QTD. PASSAGENS TOTAIS")
+passagens_totais = passagens_cpus + passagens_internas + passagens_funilaria
 passagens_cpus = get_val("QTD. PASSAGENS CPUS")
 passagens_internas = get_val("QTD. PASSAGENS INTERNAS")
 passagens_funilaria = get_val("QTD. FUNILARIA E PINTURA")
@@ -93,21 +93,3 @@ m1.metric("Passagens Totais", f"{passagens_totais:,.0f}")
 m2.metric("Passagens CPUS", f"{passagens_cpus:,.0f}")
 m3.metric("Passagens Internas", f"{passagens_internas:,.0f}")
 m4.metric("Funilaria e Pintura", f"{passagens_funilaria:,.0f}")
-
-
-
-# --- DADOS DETALHADOS ---
-with st.expander("VER DADOS BRUTOS FILTRADOS"):
-    st.dataframe(
-        df_view[
-            [
-                'periodo',
-                'REGIAO',
-                'STATE',
-                'GRUPO',
-                'DESCR_DEALER',
-                'titulo',
-                'realizado'
-            ]
-        ].sort_values(by='periodo', ascending=False)
-    )

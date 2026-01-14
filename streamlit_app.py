@@ -37,7 +37,7 @@ st.sidebar.image("https://logosmarcas.net/wp-content/uploads/2021/04/Hyundai-Log
 st.sidebar.title("Filtros")
 
 meses = df['periodo'].dt.strftime('%m/%Y').unique()
-mes_sel = st.sidebar.select_sidebar("Período de análise", options=sorted(meses))
+mes_sel = st.sidebar.select_slider("Período de análise", options=sorted(meses))
 
 
 

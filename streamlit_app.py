@@ -81,7 +81,7 @@ mes_default = meses[-1]
 
 mes_sel = st.sidebar.select_slider(
     "Período de análise",
-    options=meses
+    options=meses,
     value=mes_default
 )
 

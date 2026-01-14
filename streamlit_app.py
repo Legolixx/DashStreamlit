@@ -81,7 +81,7 @@ def get_val(titulo_nome):
 faturamento_total = get_val("R$ FATURAMENTO TOTAL")
 passagens_cpus = get_val("QTD. PASSAGENS CPUS")
 passagens_internas = get_val("QTD. PASSAGENS INTERNAS")
-passagens_funilaria = get_val("QTD. FUNILARIA E PINTURA")
+passagens_funilaria = get_val("QTD. PASSAGENS")
 passagens_totais = passagens_cpus + passagens_internas + passagens_funilaria
 
 # --- KPIs DE VOLUME ---

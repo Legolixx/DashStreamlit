@@ -171,18 +171,6 @@ if metricas_zeradas:
 # =========================================================
 # 10. DADOS DETALHADOS
 # =========================================================
-with st.expander("🔍 Ver dados brutos do período"):
-    st.dataframe(
-        df_view[
-            [
-                'periodo',
-                'regiao',
-                'state',
-                'grupo',
-                'descr_dealer',
-                'metrica_id',
-                'titulo',
-                'realizado'
-            ]
-        ].sort_values(by='realizado', ascending=False)
-    )
+if st.button("📈 Ver evolução – Passagens Totais"):
+    st.session_state["ver_evolucao_passagens"] = True
+

@@ -40,9 +40,15 @@ meses = df['periodo'].dt.strftime('%m/%Y')
 mes_sel = st.sidebar.select_slider("Período de análise", options=sorted(meses))
 
 
-
 # --- LAYOUT DO DASHBOARD ---
 st.title(f"Sumário Executivo - {mes_sel}")
+
+# --- PASSAGENS (O fluxo da oficina) ---
+st.subheader("Fluxo de passagens")
+c1, c2, c3, c4 = st.columns(4)
+
+
+
 
 
 

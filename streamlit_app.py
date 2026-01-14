@@ -44,6 +44,10 @@ mes_sel = st.sidebar.select_slider("Período de análise", options=sorted(meses)
 # --- LAYOUT DO DASHBOARD ---
 st.title(f"Sumário Executivo - {mes_sel}")
 
+# --- LÓGICA DE NEGÓCIO (Cálculo dos KPIs do Presidente) ---
+def get_val(titulo_nome):
+    return df_view[df_view['titulo'] == titulo_nome]['realizado'].sum()
+
 
 # Agrupando valores para cálculos transversais
 faturamento_total = get_val("R$ Faturamento Total") # Ajuste o nome conforme seu CSV exato

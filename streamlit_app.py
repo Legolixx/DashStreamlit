@@ -45,6 +45,12 @@ mes_sel = st.sidebar.select_slider("Período de análise", options=sorted(meses)
 st.title(f"Sumário Executivo - {mes_sel}")
 
 
+# Agrupando valores para cálculos transversais
+faturamento_total = get_val("R$ Faturamento Total") # Ajuste o nome conforme seu CSV exato
+passagens_totais = get_val("Qtd. Passagens Totais")
+passagens_cpus = get_val("Qtd. Passagens CPUS")
+
+
 # LINHA 1: KPIs DE PASSAGENS (VOLUME)
 st.subheader("📊 Volume de Passagens")
 m1, m2, m3, m4 = st.columns(4)

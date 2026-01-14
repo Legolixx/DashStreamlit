@@ -92,7 +92,17 @@ mes_sel = st.sidebar.select_slider(
 # =========================================================
 # 4. FILTRO PRINCIPAL
 # =========================================================
-df_view = df[df['periodo'].dt.strftime('%m/%Y') == mes_sel]
+df['periodo_mes'] = df['periodo'].dt.to_period('M')
+periodos = sorted(df['periodo_mes'].unique())
+periodo_default = max(periodos)
+
+periodo_sel = st.sidebar.select_slider(
+    "Período de análise",
+    options=periodos,
+    value=periodo_default,
+    format_func=lambda p: p.strftime('%m/%Y')
+)
+
 
 # =========================================================
 # 5. FUNÇÃO DE NEGÓCIO (KPI)

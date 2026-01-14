@@ -33,5 +33,5 @@ def carregar_dados():
 df = carregar_dados()
 
 # ---SIDEBAR ---
-st.sidebar.image("")
+st.sidebar.image("https://logosmarcas.net/wp-content/uploads/2021/04/Hyundai-Logo.png", width=150)
 st.sidebar.title("Filtros")

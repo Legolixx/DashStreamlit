@@ -39,6 +39,11 @@ st.sidebar.title("Filtros")
 meses = df['periodo'].dt.strftime('%m/%Y')
 mes_sel = st.sidebar.select_slider("Período de análise", options=sorted(meses))
 
+# --- FUNÇÃO AUXILIAR PARA KPIS (Evita o erro de DataFrame vazio) ---
+def calc_kpi(termos_busca):
+    mask = df_view['titulo'].str.contains('|'.join(termos_busca), na=False)
+    return df_view[mask]['realizado'].sum()
+
 
 # --- LAYOUT DO DASHBOARD ---
 st.title(f"Sumário Executivo - {mes_sel}")

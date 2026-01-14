@@ -39,20 +39,19 @@ st.sidebar.title("Filtros")
 meses = df['periodo'].dt.strftime('%m/%Y')
 mes_sel = st.sidebar.select_slider("Período de análise", options=sorted(meses))
 
-# --- FUNÇÃO AUXILIAR PARA KPIS (Evita o erro de DataFrame vazio) ---
-def calc_kpi(termos_busca):
-    mask = df_view['titulo'].str.contains('|'.join(termos_busca), na=False)
-    return df_view[mask]['realizado'].sum()
 
 
 # --- LAYOUT DO DASHBOARD ---
 st.title(f"Sumário Executivo - {mes_sel}")
 
-# --- PASSAGENS (O fluxo da oficina) ---
-st.subheader("Fluxo de passagens")
-c1, c2, c3, c4 = st.columns(4)
 
-p_cpus = calc_kpi(['CPUS'])
+# LINHA 1: KPIs DE PASSAGENS (VOLUME)
+st.subheader("📊 Volume de Passagens")
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("Passagens Totais", f"{passagens_totais:,.0f}")
+m2.metric("Passagens CPUS", f"{passagens_cpus:,.0f}")
+m3.metric("Passagens Internas", f"{passagens_internas:,.0f}")
+m4.metric("Funilaria e Pintura", f"{passagens_funilaria:,.0f}")
 
 
 

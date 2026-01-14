@@ -73,7 +73,7 @@ st.title(f"Sumário Executivo - {mes_sel}")
 # --- FUNÇÃO DE APOIO ---
 def get_val(titulo_nome):
     return df_view.loc[
-        df_view['titulo'] == titulo_nome,
+        df_view['metrica_id'] == titulo_nome,
         'realizado'
     ].sum()
 

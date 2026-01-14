@@ -31,6 +31,17 @@ st.markdown("""
 def carregar_dados():
     df = pd.read_csv("ger_servicos01.csv", sep=";", encoding="latin1")
 
+     # Normaliza metrica_id (ESSENCIAL)
+    df['metrica_id'] = (
+        df['metrica_id']
+        .astype(str)
+        .str.replace('.0', '', regex=False)
+        .str.strip()
+    )
+    df['metrica_id'] = pd.to_numeric(df['metrica_id'], errors='coerce')
+    
+    
+
     # Tratamento numérico
     df['realizado'] = (
         df['realizado']

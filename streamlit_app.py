@@ -34,14 +34,14 @@ df = carregar_dados()
 
 # 3. SIDEBAR (FILTROS MACRO)
 st.sidebar.title("Filtros Estratégicos")
-regioes = st.sidebar.multiselect("Região", sorted(df['REGIÃO'].unique()), default=df['REGIÃO'].unique())
+regioes = st.sidebar.multiselect("REGIAO", sorted(df['REGIAO'].unique()), default=df['REGIAO'].unique())
 
 # Filtro de data simplificado para o Presidente
 meses = df['periodo'].dt.strftime('%m/%Y').unique()
 mes_sel = st.sidebar.select_slider("Período de Análise", options=sorted(meses))
 
 # Aplicação dos filtros
-df_view = df[df['REGIÃO'].isin(regioes)]
+df_view = df[df['REGIAO'].isin(regioes)]
 df_view = df_view[df_view['periodo'].dt.strftime('%m/%Y') == mes_sel]
 
 # 4. FUNÇÃO AUXILIAR PARA KPIS (Evita o erro de DataFrame vazio)
@@ -112,8 +112,8 @@ with col_rank:
         st.warning("Dados de Faturamento por Grupo não encontrados para este filtro.")
 
 with col_dist:
-    st.subheader("🌎 Distribuição por Região")
-    df_pie = df_view[df_view['titulo'].str.contains('FATURAMENTO TOTAL')].groupby('REGIÃO')['realizado'].sum().reset_index()
-    fig_pie = px.pie(df_pie, values='realizado', names='REGIÃO', hole=.4, color_discrete_sequence=px.colors.qualitative.Prism)
+    st.subheader("🌎 Distribuição por REGIAO")
+    df_pie = df_view[df_view['titulo'].str.contains('FATURAMENTO TOTAL')].groupby('REGIAO')['realizado'].sum().reset_index()
+    fig_pie = px.pie(df_pie, values='realizado', names='REGIAO', hole=.4, color_discrete_sequence=px.colors.qualitative.Prism)
     fig_pie.update_layout(height=400, margin=dict(l=20, r=20, t=20, b=20))
     st.plotly_chart(fig_pie, use_container_width=True)

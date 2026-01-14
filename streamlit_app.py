@@ -42,7 +42,7 @@ mes_sel = st.sidebar.select_sidebar("Período de análise", options=sorted(meses
 
 
 # --- LAYOUT DO DASHBOARD ---
-st.title(f"Sumário Executivo - {}")
+st.title(f"Sumário Executivo - {mes_sel}")
 
 
 

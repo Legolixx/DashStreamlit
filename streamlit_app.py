@@ -38,11 +38,11 @@ min_date, max_date = df['periodo'].min(), df['periodo'].max()
 date_range = st.sidebar.date_input("Período de Análise", [min_date, max_date])
 
 # Filtros Macro
-regioes = st.sidebar.multiselect("Região", sorted(df['REGIÃO'].unique()), default=df['REGIÃO'].unique())
+regioes = st.sidebar.multiselect("Região", sorted(df['REGIAO'].unique()), default=df['REGIAO'].unique())
 grupos = st.sidebar.multiselect("Grupos Econômicos", sorted(df['GRUPO'].unique()))
 
 # Aplicação dos filtros
-df_view = df[df['REGIÃO'].isin(regioes)]
+df_view = df[df['REGIAO'].isin(regioes)]
 if grupos:
     df_view = df_view[df_view['GRUPO'].isin(grupos)]
 if len(date_range) == 2:
@@ -117,7 +117,7 @@ with col_left:
 with col_right:
     st.subheader("Performance por Região (Faturamento)")
     fig_reg = px.sunburst(df_view[df_view['titulo'].str.contains("Faturamento")], 
-                          path=['REGIÃO', 'STATE'], values='realizado',
+                          path=['REGIAO', 'STATE'], values='realizado',
                           color='realizado', color_continuous_scale='RdBu')
     st.plotly_chart(fig_reg, use_container_width=True)
 

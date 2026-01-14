@@ -39,10 +39,10 @@ def carregar_dados():
     df = pd.read_csv(
         "ger_servicos01.csv",
         sep=";",
-        encoding="utf-8-sig"  # remove BOM
+        encoding="utf-8-sig"
     )
 
-    # NORMALIZA NOMES DAS COLUNAS
+    # NORMALIZA COLUNAS
     df.columns = (
         df.columns
         .str.strip()
@@ -50,7 +50,7 @@ def carregar_dados():
         .str.replace(' ', '_')
     )
 
-    # NORMALIZA metrica_id
+    # metrica_id
     df['metrica_id'] = (
         df['metrica_id']
         .astype(str)
@@ -59,7 +59,7 @@ def carregar_dados():
     )
     df['metrica_id'] = pd.to_numeric(df['metrica_id'], errors='coerce')
 
-    # REALIZADO
+    # realizado
     df['realizado'] = (
         df['realizado']
         .astype(str)
@@ -68,14 +68,9 @@ def carregar_dados():
     )
     df['realizado'] = pd.to_numeric(df['realizado'], errors='coerce').fillna(0)
 
-    # DATA
+    # datas
     df['periodo'] = pd.to_datetime(df['periodo'], dayfirst=True)
-
-    # PERÍODO MÊS (CHAVE DO FILTRO)
     df['periodo_mes'] = df['periodo'].dt.to_period('M')
-
-    # TEXTO
-    df['titulo'] = df['titulo'].astype(str).str.upper().str.strip()
 
     return df
 
@@ -83,7 +78,7 @@ def carregar_dados():
 df = carregar_dados()
 
 # =========================================================
-# 3. SIDEBAR – FILTRO DE PERÍODO (ORDENADO + DEFAULT MAX)
+# 3. SIDEBAR – FILTRO DE PERÍODO
 # =========================================================
 st.sidebar.image(
     "https://logosmarcas.net/wp-content/uploads/2021/04/Hyundai-Logo.png",
@@ -91,13 +86,9 @@ st.sidebar.image(
 )
 st.sidebar.title("Filtros")
 
-# lista cronológica REAL
 periodos = sorted(df['periodo_mes'].unique())
-
-# default = mês mais recente da base
 periodo_default = max(periodos)
 
-# slider correto
 periodo_sel = st.sidebar.select_slider(
     "Período de análise",
     options=periodos,
@@ -111,88 +102,113 @@ periodo_sel = st.sidebar.select_slider(
 df_view = df[df['periodo_mes'] == periodo_sel]
 
 # =========================================================
-# 5. FUNÇÃO DE KPI
+# 5. MAPA DE MÉTRICAS
 # =========================================================
-def get_val(metrica_id: int) -> float:
-    return df_view.loc[
-        df_view['metrica_id'] == metrica_id,
-        'realizado'
-    ].sum()
+METRICAS_PASSAGENS = [143, 144, 154]
 
 # =========================================================
-# 6. MAPA DE MÉTRICAS
+# 6. FUNÇÕES DE NEGÓCIO
 # =========================================================
-METRICAS = {
-    "PASSAGENS_CPUS": 143,
-    "PASSAGENS_INTERNAS": 144,
-    "PASSAGENS_FUNILARIA": 154
-}
+def total_passagens(df_base):
+    return (
+        df_base[df_base['metrica_id'].isin(METRICAS_PASSAGENS)]
+        ['realizado']
+        .sum()
+    )
 
 # =========================================================
-# 7. CÁLCULO DOS KPIs
+# 7. KPIs + DELTA MÊS A MÊS
 # =========================================================
-passagens_cpus = get_val(METRICAS["PASSAGENS_CPUS"])
-passagens_internas = get_val(METRICAS["PASSAGENS_INTERNAS"])
-passagens_funilaria = get_val(METRICAS["PASSAGENS_FUNILARIA"])
+valor_atual = total_passagens(df_view)
 
-passagens_totais = (
-    passagens_cpus +
-    passagens_internas +
-    passagens_funilaria
+periodo_anterior = periodo_sel - 1
+valor_anterior = total_passagens(
+    df[df['periodo_mes'] == periodo_anterior]
 )
 
+delta = valor_atual - valor_anterior
+
 # =========================================================
-# 8. DASHBOARD
+# 8. DASHBOARD – KPIs
 # =========================================================
 st.title(f"📌 Sumário Executivo – {periodo_sel.strftime('%m/%Y')}")
 st.subheader("📊 Volume de Passagens")
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2 = st.columns([1, 3])
 
-c1.metric("Passagens Totais", f"{passagens_totais:,.0f}")
-c2.metric("Passagens CPUS", f"{passagens_cpus:,.0f}")
-c3.metric("Passagens Internas", f"{passagens_internas:,.0f}")
-c4.metric("Funilaria e Pintura", f"{passagens_funilaria:,.0f}")
-
-# =========================================================
-# 9. ALERTA DE DADOS AUSENTES
-# =========================================================
-metricas_zeradas = [
-    nome for nome, mid in METRICAS.items()
-    if get_val(mid) == 0
-]
-
-if metricas_zeradas:
-    st.warning(
-        "⚠️ Atenção: métricas sem dados no período selecionado:\n\n"
-        + ", ".join(metricas_zeradas)
+with c1:
+    st.metric(
+        "Passagens Totais",
+        f"{valor_atual:,.0f}",
+        delta=f"{delta:,.0f}"
     )
 
-# =========================================================
-# 10. TESTE DETAIL
-# =========================================================
-if st.button("📈 Ver evolução – Passagens Totais"):
-    st.session_state["ver_evolucao_passagens"] = True
+    if st.button("📈 Ver evolução (6 meses)"):
+        st.session_state["ver_evolucao"] = True
 
-if st.session_state.get("ver_evolucao_passagens", False):
-    ultimos_6 = (
-    df[df['metrica_id'].isin([143, 144, 154])]
-    .groupby('periodo_mes')['realizado']
+# =========================================================
+# 9. EVOLUÇÃO – ÚLTIMOS 6 MESES
+# =========================================================
+with c2:
+    if st.session_state.get("ver_evolucao", False):
+        evolucao = (
+            df[df['metrica_id'].isin(METRICAS_PASSAGENS)]
+            .groupby('periodo_mes')['realizado']
+            .sum()
+            .reset_index()
+            .sort_values('periodo_mes')
+            .tail(6)
+        )
+
+        fig_evolucao = px.line(
+            evolucao,
+            x='periodo_mes',
+            y='realizado',
+            markers=True,
+            title="Evolução – Passagens Totais (Últimos 6 meses)"
+        )
+
+        st.plotly_chart(fig_evolucao, use_container_width=True)
+
+# =========================================================
+# 10. RANKING DE DEALERS
+# =========================================================
+st.subheader("🏆 Ranking de Dealers – Passagens Totais")
+
+ranking = (
+    df_view[df_view['metrica_id'].isin(METRICAS_PASSAGENS)]
+    .groupby('descr_dealer')['realizado']
     .sum()
     .reset_index()
-    .sort_values('periodo_mes')
-    .tail(6)
+    .sort_values('realizado', ascending=False)
 )
 
-fig = px.line(
-    ultimos_6,
-    x='periodo_mes',
-    y='realizado',
-    markers=True,
-    title="Evolução – Passagens Totais (Últimos 6 meses)"
+top10 = ranking.head(10)
+
+fig_rank = px.bar(
+    top10,
+    x='realizado',
+    y='descr_dealer',
+    orientation='h',
+    title="Top 10 Dealers – Mês Selecionado"
 )
 
-st.plotly_chart(fig, use_container_width=True)
-    
+st.plotly_chart(fig_rank, use_container_width=True)
 
-
+# =========================================================
+# 11. DADOS DETALHADOS
+# =========================================================
+with st.expander("🔍 Ver dados brutos do período"):
+    st.dataframe(
+        df_view[
+            [
+                'periodo',
+                'regiao',
+                'state',
+                'grupo',
+                'descr_dealer',
+                'metrica_id',
+                'realizado'
+            ]
+        ].sort_values(by='realizado', ascending=False)
+    )

@@ -36,9 +36,21 @@ st.markdown("""
 # =========================================================
 @st.cache_data
 def carregar_dados():
-    df = pd.read_csv("ger_servicos01.csv", sep=";", encoding="utf-8-sig")
+    df = pd.read_csv(
+        "ger_servicos01.csv",
+        sep=";",
+        encoding="utf-8-sig"  # remove BOM
+    )
 
-    # --- NORMALIZA metrica_id (CRÍTICO)
+    # NORMALIZA NOMES DAS COLUNAS
+    df.columns = (
+        df.columns
+        .str.strip()
+        .str.lower()
+        .str.replace(' ', '_')
+    )
+
+    # NORMALIZA metrica_id
     df['metrica_id'] = (
         df['metrica_id']
         .astype(str)
@@ -47,7 +59,7 @@ def carregar_dados():
     )
     df['metrica_id'] = pd.to_numeric(df['metrica_id'], errors='coerce')
 
-    # --- TRATAMENTO DO REALIZADO
+    # REALIZADO
     df['realizado'] = (
         df['realizado']
         .astype(str)
@@ -56,10 +68,13 @@ def carregar_dados():
     )
     df['realizado'] = pd.to_numeric(df['realizado'], errors='coerce').fillna(0)
 
-    # --- DATA
+    # DATA
     df['periodo'] = pd.to_datetime(df['periodo'], dayfirst=True)
 
-    # --- LIMPEZA DE TEXTO
+    # PERÍODO MÊS (CHAVE DO FILTRO)
+    df['periodo_mes'] = df['periodo'].dt.to_period('M')
+
+    # TEXTO
     df['titulo'] = df['titulo'].astype(str).str.upper().str.strip()
 
     return df
@@ -68,7 +83,7 @@ def carregar_dados():
 df = carregar_dados()
 
 # =========================================================
-# 3. SIDEBAR – FILTROS
+# 3. SIDEBAR – FILTRO DE PERÍODO (ORDENADO + DEFAULT MAX)
 # =========================================================
 st.sidebar.image(
     "https://logosmarcas.net/wp-content/uploads/2021/04/Hyundai-Logo.png",
@@ -76,26 +91,13 @@ st.sidebar.image(
 )
 st.sidebar.title("Filtros")
 
-meses = sorted(df['periodo'].dt.strftime('%m/%Y').unique())
-mes_default = (
-    df['periodo']
-    .max()
-    .strftime('%m/%Y')
-)
-
-mes_sel = st.sidebar.select_slider(
-    "Período de análise",
-    options=meses,
-    value=mes_default
-)
-
-# =========================================================
-# 4. FILTRO PRINCIPAL
-# =========================================================
-df['periodo_mes'] = df['periodo'].dt.to_period('M')
+# lista cronológica REAL
 periodos = sorted(df['periodo_mes'].unique())
+
+# default = mês mais recente da base
 periodo_default = max(periodos)
 
+# slider correto
 periodo_sel = st.sidebar.select_slider(
     "Período de análise",
     options=periodos,
@@ -103,9 +105,13 @@ periodo_sel = st.sidebar.select_slider(
     format_func=lambda p: p.strftime('%m/%Y')
 )
 
+# =========================================================
+# 4. FILTRO PRINCIPAL
+# =========================================================
+df_view = df[df['periodo_mes'] == periodo_sel]
 
 # =========================================================
-# 5. FUNÇÃO DE NEGÓCIO (KPI)
+# 5. FUNÇÃO DE KPI
 # =========================================================
 def get_val(metrica_id: int) -> float:
     return df_view.loc[
@@ -114,7 +120,7 @@ def get_val(metrica_id: int) -> float:
     ].sum()
 
 # =========================================================
-# 6. MAPA DE MÉTRICAS (PADRÃO BI)
+# 6. MAPA DE MÉTRICAS
 # =========================================================
 METRICAS = {
     "PASSAGENS_CPUS": 143,
@@ -136,9 +142,9 @@ passagens_totais = (
 )
 
 # =========================================================
-# 8. DASHBOARD – KPIs
+# 8. DASHBOARD
 # =========================================================
-st.title(f"📌 Sumário Executivo – {mes_sel}")
+st.title(f"📌 Sumário Executivo – {periodo_sel.strftime('%m/%Y')}")
 st.subheader("📊 Volume de Passagens")
 
 c1, c2, c3, c4 = st.columns(4)
@@ -149,7 +155,7 @@ c3.metric("Passagens Internas", f"{passagens_internas:,.0f}")
 c4.metric("Funilaria e Pintura", f"{passagens_funilaria:,.0f}")
 
 # =========================================================
-# 9. ALERTA DE DADOS AUSENTES (INTELIGENTE)
+# 9. ALERTA DE DADOS AUSENTES
 # =========================================================
 metricas_zeradas = [
     nome for nome, mid in METRICAS.items()
@@ -170,10 +176,10 @@ with st.expander("🔍 Ver dados brutos do período"):
         df_view[
             [
                 'periodo',
-                'REGIAO',
-                'STATE',
-                'GRUPO',
-                'DESCR_DEALER',
+                'regiao',
+                'state',
+                'grupo',
+                'descr_dealer',
                 'metrica_id',
                 'titulo',
                 'realizado'
